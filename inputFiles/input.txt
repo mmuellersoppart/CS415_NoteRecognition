@@ -1,0 +1,6 @@
+[image name, maxValue, blockSize]
+IMG_1802.jpg
+220
+401
+
+
