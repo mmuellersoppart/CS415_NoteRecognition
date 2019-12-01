@@ -149,3 +149,6 @@ class centeredImage:
                 allCordinates.append(point)
 
         return allCordinates
+
+    def getPixelVal(self, xPos, yPos):
+        return [self.xPosToXIndex(xPos), self.yPosToYIndex(yPos)]

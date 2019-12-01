@@ -1,6 +1,9 @@
-[image name, maxValue, blockSize]
+[image name, kernelSize, thresh, maxVal, hough threshold, hough num lines]
 IMG_1802.jpg
-220
-401
+25
+170
+255
+500
+8
 
 
