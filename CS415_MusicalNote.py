@@ -3,11 +3,11 @@ import pathlib
 import cv2
 import time
 import statistics as stats
-from FolderHandler import FolderHandler
 import sklearn
 from sklearn.cluster import KMeans
-from CenteredImage import centeredImage
 
+from FolderHandler import FolderHandler
+from KernelBlob import KernelBlobs
 
 def main():
     # ********************
@@ -188,6 +188,10 @@ def main():
 
     #average space between lines
     averageSpacing = calcAverageSpacing(lineAnchors)
+
+    blobs = KernelBlobs(testImgBWAdap, averageSpacing, percentOfCircle=1.25, stride=15)
+
+
 
 def calcAverageSpacing(list):
     numSpaces = len(list) - 1
