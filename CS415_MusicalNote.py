@@ -69,6 +69,7 @@ def main():
     # testImgBWAdap = cv2.adaptiveThreshold(testImgBW, maxValue=threshMaxVal, adaptiveMethod=cv2.ADAPTIVE_THRESH_MEAN_C,
     #                                       thresholdType=cv2.THRESH_BINARY, blockSize=threshBlockSize, C=2)
 
+    #apply binary threshold
     ret, testImgBWAdap = cv2.threshold(testImgBW, thresh, maxVal, cv2.THRESH_BINARY)
 
     # write intermediate image
@@ -97,7 +98,7 @@ def main():
             print("ERROR: could not find any lines")
             break
 
-    while len(lines) > 12:
+    while lines is not None and len(lines) > 12:
         houghVotes = houghVotes + 20
         print(f"lower threshold to {houghVotes}")
         lines = cv2.HoughLines(imgCanny, rho=1, theta=np.pi / 180, threshold=houghVotes)
@@ -158,19 +159,49 @@ def main():
     # ********************
 
     rhos = np.array(rhos)
-    print(rhos.reshape(-1, 1))
     #select the anchors of each line to the left
     kmeans1 = KMeans(n_clusters=5)
     kmeans1.fit(rhos.reshape(-1, 1))
 
-    # where the 5 ones are
-    print(kmeans1.cluster_centers_)
+    lineAnchors = []
 
+    # where the 5 ones are
     for cluster in kmeans1.cluster_centers_:
+        lineAnchors.append(cluster[0])
         imgCanny = applyColorKernel(imgCanny, 1, int(cluster[0]), 9)
+
+    lineAnchors.sort(reverse=True) #bottom line at the top of the list
 
     # write initial lined image
     wrkSpace1.writeImageToOutput(imgCanny, imgNameNoExtension + "_ClusterDots" + ".png")
+
+    # ********************
+    # Begin blob detection
+    print("5. blob detection\n")
+    blobStart = time.time()
+    # ********************
+
+    #gameplan
+
+    #approximate the size of the note
+
+
+    #average space between lines
+    averageSpacing = calcAverageSpacing(lineAnchors)
+
+def calcAverageSpacing(list):
+    numSpaces = len(list) - 1
+
+    totalSpace = 0
+    for index in range(numSpaces):
+        totalSpace = totalSpace + (list[index] - list[index + 1])
+
+    avgSpace = int(totalSpace/numSpaces)
+
+    if avgSpace % 2 == 0:
+        avgSpace = avgSpace - 1
+
+    return avgSpace
 
 def applyColorKernel(workingImg, xPos, yPos, size):
     """
@@ -189,7 +220,6 @@ def applyColorKernel(workingImg, xPos, yPos, size):
     for distY in allDistFromOrigin:
         for distX in allDistFromOrigin:
             try:
-                print(yPos + distY, xPos + distX)
                 workingImg[yPos + distY][xPos + distX] = 200
             except IndexError:
                 pass
