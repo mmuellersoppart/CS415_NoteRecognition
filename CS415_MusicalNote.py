@@ -4,6 +4,8 @@ import time
 import cv2
 import numpy as np
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+import music21 as m
 
 from FolderHandler import FolderHandler
 from KernelBlob import KernelBlobs
@@ -54,7 +56,6 @@ def main():
     blobStrideSearch = int(fileArgs.pop(0))
     blobPtNeighborCheck = int(fileArgs.pop(0))
 
-
     print(f"***** Execution Info ******\n"
           f"Playing image: {imgName} | Rescaled: {round(imgRescalePercent, 2)}\n"
           f"Gaussian Kernel Info: {gaussianKernel}\n"
@@ -90,7 +91,7 @@ def main():
     # testImgBWAdap = cv2.adaptiveThreshold(testImgBW, maxValue=threshMaxVal, adaptiveMethod=cv2.ADAPTIVE_THRESH_MEAN_C,
     #                                       thresholdType=cv2.THRESH_BINARY, blockSize=threshBlockSize, C=2)
 
-    #apply binary threshold
+    # apply binary threshold
     ret, testImgBWAdap = cv2.threshold(testImgBW, thresh, maxVal, cv2.THRESH_BINARY)
 
     # write intermediate image
@@ -135,7 +136,7 @@ def main():
     fewLinesStart = time.time()
     # ********************
 
-    #filter out unwanted lines
+    # filter out unwanted lines
 
     rhos = []
     thetas = []
@@ -144,7 +145,7 @@ def main():
             rhos.append(rho)
             thetas.append(theta)
 
-    #get the mode of the lines
+    # get the mode of the lines
     thetasCopy = thetas.copy()
     for index1 in range(len(thetasCopy)):
         thetasCopy[index1] = round(thetasCopy[index1], 2)
@@ -153,10 +154,10 @@ def main():
 
     print(f"Mode of thetas: {thetaMode}")
 
-    #search for lines that deviate too much (20 degrees greater than the mode)
+    # search for lines that deviate too much (20 degrees greater than the mode)
     badLines = [i for i, x in enumerate(thetas) if abs(x - thetaMode) > houghAngleThresh]
 
-    #remove the lines that are too crooked
+    # remove the lines that are too crooked
     for index2 in sorted(badLines, reverse=True):
         del rhos[index2]
         del thetas[index2]
@@ -168,7 +169,6 @@ def main():
     # draw on the lines
     for i in range(len(lines)):
         for rho, theta in lines[i]:
-
             a = np.cos(theta)
             b = np.sin(theta)
             x0 = a * rho
@@ -188,7 +188,7 @@ def main():
     # ********************
 
     rhos = np.array(rhos)
-    #select the anchors of each line to the left
+    # select the anchors of each line to the left
     kmeans1 = KMeans(n_clusters=5)
     kmeans1.fit(rhos.reshape(-1, 1))
 
@@ -199,7 +199,7 @@ def main():
         lineAnchors.append(cluster[0])
         imgCanny = applyColorKernel(imgCanny, 1, int(cluster[0]), 9)
 
-    lineAnchors.sort(reverse=True) #bottom line at the top of the list
+    lineAnchors.sort(reverse=True)  # bottom line at the top of the list
 
     # write initial lined image
     wrkSpace1.writeImageToOutput(imgCanny, imgNameNoExtension + "_ClusterDots" + ".png")
@@ -216,12 +216,74 @@ def main():
     # percent of circle Up - more selective | Down - less selective
     blobs = KernelBlobs(testImgBWAdap, averageSpacing, percentOfCircle=blobPercent, stride=blobStrideSearch,
                         neighborCheck=blobPtNeighborCheck)
-
+    bc = np.array(blobs.listOfCenters)
+    blobs_sorted = np.array(bc[np.argsort(bc[:, 0])])
+    print(blobs_sorted)
     # testing/visual purposes
     for center in blobs.listOfCenters:
         imgCanny = applyColorKernel(imgCanny, center[0], center[1], 11)
     wrkSpace1.writeImageToOutput(imgCanny, imgNameNoExtension + "_BlobDots" + ".png")
 
+    plt.imshow(imgCanny)
+    plt.show()
+
+    # ********************
+    # Begin note recognition
+    print("\n6. Note recognition\n")
+    # recognitionStart = time.time()
+    # ********************
+
+    # search area
+    neigh = 10
+
+    # a list of notes (equal to number of blobs found)
+    # initialize all to -999
+    note = np.zeros(blobs_sorted.shape[0])
+    note = note - 999
+    noteNames = []
+
+    # go through each blob point
+    for b in range(blobs_sorted.shape[0]):
+        # get the y coordinate
+        y = blobs_sorted[b, 1]
+
+        for i in range(len(lineAnchors)):
+            if (lineAnchors[i] + neigh > y > lineAnchors[i] - neigh):
+                note[b] = 2 * i + 1
+                break
+            if (y > lineAnchors[i]):
+                note[b] = 2 * i
+                break
+        if (note[b] >= -1):
+            if (note[b] > 3):
+                note[b] -= 7
+
+            #sick ascii arithmetic
+            noteNames.append(str(chr(int(68 + note[b]))))
+
+    print(note)
+    print(noteNames)
+
+    # ********************
+    # Turn notes into music!
+    print("\n7. Play notes\n")
+    # assembleSongStart = time.time()
+    # ********************
+
+    # necessary for my machine to view midi files (delete on yours)
+    a = m.environment.Environment()
+    a['musicxmlPath'] = '/Applications/MuseScore.app'
+
+    #the song
+    stream = m.stream.Stream()
+
+    #turn char into music21 notes
+    for noteName in noteNames:
+        n = m.note.Note(noteName)
+        stream.append(n)
+
+    #play the song
+    stream.show('midi')
 
 def calcAverageSpacing(list):
     numSpaces = len(list) - 1
@@ -230,12 +292,13 @@ def calcAverageSpacing(list):
     for index in range(numSpaces):
         totalSpace = totalSpace + (list[index] - list[index + 1])
 
-    avgSpace = int(totalSpace/numSpaces)
+    avgSpace = int(totalSpace / numSpaces)
 
     if avgSpace % 2 == 0:
         avgSpace = avgSpace - 1
 
     return avgSpace
+
 
 def applyColorKernel(workingImg, xPos, yPos, size):
     """
@@ -257,5 +320,6 @@ def applyColorKernel(workingImg, xPos, yPos, size):
                 pass
 
     return workingImg
+
 
 main()
