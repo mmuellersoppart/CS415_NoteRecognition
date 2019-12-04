@@ -1,13 +1,13 @@
-import numpy as np
-import pathlib
-import cv2
-import time
 import statistics as stats
-import sklearn
+import time
+
+import cv2
+import numpy as np
 from sklearn.cluster import KMeans
 
 from FolderHandler import FolderHandler
 from KernelBlob import KernelBlobs
+
 
 def main():
     # ********************
@@ -38,6 +38,8 @@ def main():
     imgNameNoExtension = imgName.rsplit('.')[0]
     testImg = cv2.imread(str(wrkSpace1.srcImgPath.joinpath(imgName)))
 
+    # image rescaling
+    imgRescalePercent = float(fileArgs.pop(0))
     # parameters for gaussian
     gaussianKernel = int(fileArgs.pop(0))
     # parameters for thresholding
@@ -46,12 +48,24 @@ def main():
     # hough
     houghVotes = int(fileArgs.pop(0))
     houghLines = int(fileArgs.pop(0))
+    houghAngleThresh = float(fileArgs.pop(0))
+    # blob
+    blobPercent = float(fileArgs.pop(0))
+    blobStrideSearch = int(fileArgs.pop(0))
+    blobPtNeighborCheck = int(fileArgs.pop(0))
+
 
     print(f"***** Execution Info ******\n"
-          f"Playing image: {imgName}\n"
+          f"Playing image: {imgName} | Rescaled: {round(imgRescalePercent, 2)}\n"
           f"Gaussian Kernel Info: {gaussianKernel}\n"
           f"Threshold Info \n   thresh: {thresh} | maxVal: {maxVal}\n"
-          f"Hough Info \n   Vote threshold: {houghVotes} | Looking for {houghLines} lines\n")
+
+          f"Hough Info \n   Vote threshold: {houghVotes} | Looking for {houghLines} lines | radians deviation"
+          f" {houghAngleThresh}\n"
+
+          f"Blob Kernel Info \n"
+          f"    Percent Circle: {blobPercent} | blob stride search: {blobStrideSearch} | "
+          f"blob neighbor check: {blobPtNeighborCheck}\n")
 
     # ********************
     # Preprocess Image
@@ -61,6 +75,13 @@ def main():
 
     # convert 3 channels to 1 channel
     testImgBW = cv2.cvtColor(testImg, cv2.COLOR_BGR2GRAY)
+
+    # rescale
+    scale_percent = 60  # percent of original size
+    width = int(testImgBW.shape[1] * scale_percent / 100)
+    height = int(testImgBW.shape[0] * scale_percent / 100)
+    dim = (width, height)
+    testImgBW = cv2.resize(testImgBW, dim, interpolation=cv2.INTER_AREA)
 
     # apply smoothing
     testImgBW = cv2.GaussianBlur(testImgBW, (gaussianKernel, gaussianKernel), 0)
@@ -106,6 +127,8 @@ def main():
             print("ERROR: We cannot get rid of the lines!")
             break
 
+    print()
+
     # ********************
     # Remove Unwanted Lines
     print("3. Remove Unwanted Lines\n")
@@ -128,17 +151,23 @@ def main():
 
     thetaMode = stats.mode(thetasCopy)
 
+    print(f"Mode of thetas: {thetaMode}")
+
     #search for lines that deviate too much (20 degrees greater than the mode)
-    badLines = [i for i, x in enumerate(thetas) if abs(x - thetaMode) > .35]
+    badLines = [i for i, x in enumerate(thetas) if abs(x - thetaMode) > houghAngleThresh]
 
     #remove the lines that are too crooked
     for index2 in sorted(badLines, reverse=True):
         del rhos[index2]
         del thetas[index2]
 
+    print(f"bad lines:\n"
+          f"{badLines}")
+    print(f"Num Good Lines: {len(rhos)}\n")
+
+    # draw on the lines
     for i in range(len(lines)):
         for rho, theta in lines[i]:
-            print(rho, theta)
 
             a = np.cos(theta)
             b = np.sin(theta)
@@ -181,16 +210,17 @@ def main():
     blobStart = time.time()
     # ********************
 
-    #gameplan
-
-    #approximate the size of the note
-
-
-    #average space between lines
+    # average space between lines
     averageSpacing = calcAverageSpacing(lineAnchors)
 
-    blobs = KernelBlobs(testImgBWAdap, averageSpacing, percentOfCircle=1.25, stride=15)
+    # percent of circle Up - more selective | Down - less selective
+    blobs = KernelBlobs(testImgBWAdap, averageSpacing, percentOfCircle=blobPercent, stride=blobStrideSearch,
+                        neighborCheck=blobPtNeighborCheck)
 
+    # testing/visual purposes
+    for center in blobs.listOfCenters:
+        imgCanny = applyColorKernel(imgCanny, center[0], center[1], 11)
+    wrkSpace1.writeImageToOutput(imgCanny, imgNameNoExtension + "_BlobDots" + ".png")
 
 
 def calcAverageSpacing(list):
@@ -209,9 +239,7 @@ def calcAverageSpacing(list):
 
 def applyColorKernel(workingImg, xPos, yPos, size):
     """
-    :param maxKernel: object , kernel type max
     :param workingImg: img - where the kernel will be applied to
-    :param kernel: max kernel - (a kernel with only 1s)
     :param xPos: int - xPos on matrix coordinate (not in terms of theta or rho)
     :param yPos: int - yPos on matrix coordinate (not in terms of theta or rho)
     :return: bool True for max and F for not max

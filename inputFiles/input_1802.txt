@@ -1,5 +1,5 @@
 [image name, kernelSize, thresh, maxVal, hough threshold, hough num lines, hough line angle (radians), percent Circle (big less selective), stride, neighbors]
-IMG_1801.jpg
+IMG_1802.jpg
 .6
 25
 170

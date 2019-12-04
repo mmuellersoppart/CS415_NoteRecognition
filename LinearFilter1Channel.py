@@ -1,14 +1,15 @@
-import numpy as np
-from Kernel import Kernel
-import cv2
 import statistics
+
+import cv2
+import numpy as np
+
+from Kernel import Kernel
 
 
 class LinearFilter:
 
     def __init__(self, srcImage=np.zeros((3, 3)), kernel=Kernel("mean", 3), thresh=50):
         """
-        :param image: numpy.ndarray
         :param kernel: numpy.array
         """
         self.srcImage = srcImage
@@ -140,15 +141,15 @@ class LinearFilter:
         self.finalImage[xPos][yPos] = channelWeightedSum
         return [xPos, yPos]
 
-    def applyKernelToOnePixelDarkness(self, xPos, yPos):
+    def applyKernelToOnePixelDarkness(self, yPos, xPos):
         """
-        :param xPos: x index on src image where to apply kernel
-        :param yPos: y index on src image where to apply kernel
+        :param yPos: x index on src image where to apply kernel
+        :param xPos: y index on src image where to apply kernel
         :return: changes pixel on final output
         """
 
         # compute the weighted sum of the kernel for a single channel
-        channelWeightedSum = self.computeWeightedSum(xPos, yPos)
+        channelWeightedSum = self.computeWeightedSum(yPos, xPos)
 
         # rules specific to this
         if channelWeightedSum > 255:
@@ -157,13 +158,13 @@ class LinearFilter:
             channelWeightedSum = 0
 
         if channelWeightedSum < self.thresh:
-            print(f"        clusterFound: {channelWeightedSum}")
+            print(f"        blobPtFound: {channelWeightedSum}")
             # update image with new pixel
-            self.finalImage[xPos][yPos] = channelWeightedSum
+            self.finalImage[yPos][xPos] = channelWeightedSum
             return [xPos, yPos]
         else:
             channelWeightedSum = 255
-            self.finalImage[xPos][yPos] = channelWeightedSum
+            self.finalImage[yPos][xPos] = channelWeightedSum
             return None
 
     def applyMedianKernelToOnePixelAllChannels(self, xPos, yPos):
