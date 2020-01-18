@@ -1,6 +1,11 @@
+# Name - Points and Lines
+# Author - Marlon Mueller-Soppart
+# Date - 01/18/2020
+# ob - This file helps find a point in relation to the 5 line in a staff
+
 def centerOfLine(pt, threshImg):
     """
-    ob - find the center of the line (at least confirm point is on black pixel
+    ob - find the center of the line (at least confirm point is on black pixel)
     :param pt: Int - y-coordinate of an anchor points
     :param threshImg: threshholded image
     :return: Int - y-coordinate of the center of the closest line
@@ -35,7 +40,6 @@ def findClosestLine(pt, img):
     ob - find a black line closest to point
     :param pt: [Int, Int] - yCor of point
     :param img: np array
-    :param searchDepth: Int - how far we are willing to travel up and down
     :return: Int - The first point found that is on black (value = 0)
     """
 
@@ -107,19 +111,19 @@ def determineNote(linePositions, blobCenter):
 
     # edge cases
     if blobY < linePositions[0]:
-        return "G5"
+        return "B''4"
 
     if blobY > linePositions[4]:
-        return "C4"
+        return "DD4"
 
     lowestNote = 0
 
-    noteDict = {0: "F5", 1: "E5", 2: "D5", 3: "C5", 4: "B5", 5: "A5", 6: "G4", 7: "F4", 8: "E4", 9: "C4"}
+    noteDict = {0: "A''4", 1: "G4", 2: "F4", 3: "E4", 4: "D4", 5: "C4", 6: "BB4", 7: "AA4", 8: "GG4", 9: "FF4"}
     pos2NumDict = {"top": 0, "middle": 1, "bottom": 2}
     top = 0
     bottom = 0
 
-    for index in range(1, 4):
+    for index in range(1, 5):
         if blobY <= linePositions[index]:
             bottom = linePositions[index]
             top = linePositions[index - 1]
@@ -149,4 +153,3 @@ def notePosBetweenLines(top, bottom, point, tolerance):
         return "middle"
     else:
         return "bottom"
-

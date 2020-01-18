@@ -1,3 +1,9 @@
+"""
+Author: Marlon Mueller-Soppart
+Date: 01/18/2020
+Objective: Easily access paths of all the directories in the project
+"""
+
 import pathlib
 import sys
 import cv2

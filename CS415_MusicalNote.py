@@ -239,6 +239,8 @@ def main():
     # recognitionStart = time.time()
     # ********************
 
+    noteString = ""
+
     for b in range(blobs_sorted.shape[0]):
 
         #extract
@@ -250,46 +252,8 @@ def main():
         print(PointsAndLines.linePositions(lineAnchors, testImgBWAdap, x))
         linePositions = PointsAndLines.linePositions(lineAnchors, testImgBWAdap, x)
         print(PointsAndLines.determineNote(linePositions, [x, y]))
-        print()
+        noteString = noteString + " " + PointsAndLines.determineNote(linePositions, [x, y])
 
-    # wrkSpace1.writeImageToOutput(imgCanny, imgNameNoExtension + "_NoteDetection" + ".png")
-
-    # # search area
-    # neigh = 10
-    #
-    # # a list of notes (equal to number of blobs found)
-    # # initialize all to -999
-    # note = np.zeros(blobs_sorted.shape[0])
-    # note = note - 999
-    # noteNames = []
-    #
-    # # go through each blob point
-    # for b in range(blobs_sorted.shape[0]):
-    #     # get the y coordinate
-    #     y = blobs_sorted[b, 1]
-    #
-    #     # go through each line anchor
-    #     for i in range(len(lineAnchors)):
-    #         # check if on that line
-    #         if lineAnchors[i] + neigh > y > lineAnchors[i] - neigh:
-    #             note[b] = 2 * i + 1
-    #             break
-    #
-    #         # or if point is below the line
-    #         if y > lineAnchors[i]:
-    #             note[b] = 2 * i
-    #             break
-    #
-    #     # this is an implementation of modulo
-    #     if note[b] >= -1:
-    #         if note[b] > 3:
-    #             note[b] -= 7
-    #
-    #         # sick ascii arithmetic
-    #         noteNames.append(str(chr(int(68 + note[b]))))
-    #
-    # print(note)
-    # print(noteNames)
 
     # ********************
     # Turn notes into music!
@@ -297,10 +261,17 @@ def main():
     # assembleSongStart = time.time()
     # ********************
 
-    # # necessary for my machine to view midi files (delete on yours)
-    # a = m.environment.Environment()
-    # a['musicxmlPath'] = '/Applications/MuseScore.app'
-    #
+    tinyNotationStart = "tinyNotation: 4/4"
+    fullString = tinyNotationStart + noteString
+    print(fullString)
+
+    # necessary for my machine to view midi files (delete on yours)
+    a = m.environment.Environment()
+    a['musicxmlPath'] = '/Applications/MuseScore.app'
+
+    stream = m.converter.parse(fullString)
+    stream.show()
+
     # # the song
     # stream = m.stream.Stream()
     #
