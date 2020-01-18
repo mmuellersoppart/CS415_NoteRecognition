@@ -88,11 +88,14 @@ class KernelBlobs:
 
                     # the point is not the smallest (darkest)
 
-                    if pointVal >= image[currYPos + yShift][currXPos + xShift]:
-                        # delete oneself from image
-                        image[currYPos][currXPos] = 255
-                        isDone = True
-                        break
+                    try:
+                        if pointVal >= image[currYPos + yShift][currXPos + xShift]:
+                            # delete oneself from image
+                            image[currYPos][currXPos] = 255
+                            isDone = True
+                            break
+                    except:
+                        print("cant be done")
 
             # done checking neighboring points
             if not isDone:

@@ -9,11 +9,11 @@ import music21 as m
 
 from FolderHandler import FolderHandler
 from KernelBlob import KernelBlobs
-
+import PointsAndLines
 
 def main():
     # ********************
-    # Image Classification
+    # Set up
     print("begin project setup\n")
     setupStart = time.time()
     # ********************
@@ -196,8 +196,13 @@ def main():
 
     # where the 5 ones are
     for cluster in kmeans1.cluster_centers_:
-        lineAnchors.append(cluster[0])
-        imgCanny = applyColorKernel(imgCanny, 1, int(cluster[0]), 9)
+        #put all values in list
+        point = (0, int(cluster[0]))
+        lineAnchors.append(PointsAndLines.centerOfLine(point, testImgBWAdap))
+        imgCanny = applyColorKernel(imgCanny, 1, lineAnchors[-1], 3)
+
+    print(lineAnchors)
+    print()
 
     lineAnchors.sort(reverse=True)  # bottom line at the top of the list
 
@@ -219,6 +224,7 @@ def main():
     bc = np.array(blobs.listOfCenters)
     blobs_sorted = np.array(bc[np.argsort(bc[:, 0])])
     print(blobs_sorted)
+
     # testing/visual purposes
     for center in blobs.listOfCenters:
         imgCanny = applyColorKernel(imgCanny, center[0], center[1], 11)
@@ -233,36 +239,57 @@ def main():
     # recognitionStart = time.time()
     # ********************
 
-    # search area
-    neigh = 10
-
-    # a list of notes (equal to number of blobs found)
-    # initialize all to -999
-    note = np.zeros(blobs_sorted.shape[0])
-    note = note - 999
-    noteNames = []
-
-    # go through each blob point
     for b in range(blobs_sorted.shape[0]):
-        # get the y coordinate
-        y = blobs_sorted[b, 1]
 
-        for i in range(len(lineAnchors)):
-            if (lineAnchors[i] + neigh > y > lineAnchors[i] - neigh):
-                note[b] = 2 * i + 1
-                break
-            if (y > lineAnchors[i]):
-                note[b] = 2 * i
-                break
-        if (note[b] >= -1):
-            if (note[b] > 3):
-                note[b] -= 7
+        #extract
+        x = blobs_sorted[b][0]
+        y = blobs_sorted[b][1]
 
-            #sick ascii arithmetic
-            noteNames.append(str(chr(int(68 + note[b]))))
 
-    print(note)
-    print(noteNames)
+        print(f"blob at ({x},{y})\n")
+        print(PointsAndLines.linePositions(lineAnchors, testImgBWAdap, x))
+        linePositions = PointsAndLines.linePositions(lineAnchors, testImgBWAdap, x)
+        print(PointsAndLines.determineNote(linePositions, [x, y]))
+        print()
+
+    # wrkSpace1.writeImageToOutput(imgCanny, imgNameNoExtension + "_NoteDetection" + ".png")
+
+    # # search area
+    # neigh = 10
+    #
+    # # a list of notes (equal to number of blobs found)
+    # # initialize all to -999
+    # note = np.zeros(blobs_sorted.shape[0])
+    # note = note - 999
+    # noteNames = []
+    #
+    # # go through each blob point
+    # for b in range(blobs_sorted.shape[0]):
+    #     # get the y coordinate
+    #     y = blobs_sorted[b, 1]
+    #
+    #     # go through each line anchor
+    #     for i in range(len(lineAnchors)):
+    #         # check if on that line
+    #         if lineAnchors[i] + neigh > y > lineAnchors[i] - neigh:
+    #             note[b] = 2 * i + 1
+    #             break
+    #
+    #         # or if point is below the line
+    #         if y > lineAnchors[i]:
+    #             note[b] = 2 * i
+    #             break
+    #
+    #     # this is an implementation of modulo
+    #     if note[b] >= -1:
+    #         if note[b] > 3:
+    #             note[b] -= 7
+    #
+    #         # sick ascii arithmetic
+    #         noteNames.append(str(chr(int(68 + note[b]))))
+    #
+    # print(note)
+    # print(noteNames)
 
     # ********************
     # Turn notes into music!
@@ -270,20 +297,21 @@ def main():
     # assembleSongStart = time.time()
     # ********************
 
-    # necessary for my machine to view midi files (delete on yours)
-    a = m.environment.Environment()
-    a['musicxmlPath'] = '/Applications/MuseScore.app'
+    # # necessary for my machine to view midi files (delete on yours)
+    # a = m.environment.Environment()
+    # a['musicxmlPath'] = '/Applications/MuseScore.app'
+    #
+    # # the song
+    # stream = m.stream.Stream()
+    #
+    # # turn char into music21 notes
+    # for noteName in noteNames:
+    #     n = m.note.Note(noteName)
+    #     stream.append(n)
+    #
+    # # play the song
+    # # stream.show('midi')
 
-    #the song
-    stream = m.stream.Stream()
-
-    #turn char into music21 notes
-    for noteName in noteNames:
-        n = m.note.Note(noteName)
-        stream.append(n)
-
-    #play the song
-    stream.show('midi')
 
 def calcAverageSpacing(list):
     numSpaces = len(list) - 1
